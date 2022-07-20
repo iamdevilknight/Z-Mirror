@@ -63,13 +63,13 @@ class TgUploader:
 
     def __upload_file(self, up_path, file_, dirpath):
         if CUSTOM_FILENAME is not None:
-            cap_mono = f"{CUSTOM_FILENAME} <code>{file_}</code>"
-            file_ = f"{CUSTOM_FILENAME} {file_}"
+            cap_mono = f"<code>{file_}\n\n</code><b><i>Uploaded By : @MovieJunctionGrp 🔥</i></b>"
+            file_ = f"{CUSTOM_FILENAME}{file_}"
             new_path = ospath.join(dirpath, file_)
             osrename(up_path, new_path)
             up_path = new_path
         else:
-            cap_mono = f"<code>{file_}</code>"
+            cap_mono = f"<b><i>{file_}\n\nUploaded By : @MovieJunctionGrp 🔥</i></b>"
         notMedia = False
         thumb = self.__thumb
         self.__is_corrupted = False
