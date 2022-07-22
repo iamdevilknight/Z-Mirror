@@ -22,9 +22,6 @@ from bot import LOGGER, UPTOBOX_TOKEN, CRYPT, APPDRIVE_EMAIL, APPDRIVE_PASS
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.ext_utils.bot_utils import is_gdtot_link, is_appdrive_link
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
-from bs4 import BeautifulSoup as b4
-import requests as r
-import re
 
 fmed_list = ['fembed.net', 'fembed.com', 'femax20.com', 'fcdn.stream', 'feurl.com', 'layarkacaxxi.icu',
              'naniplay.nanime.in', 'naniplay.nanime.biz', 'naniplay.com', 'mm9842.com']
@@ -72,25 +69,28 @@ def direct_link_generator(link: str):
         return krakenfiles(link)
     elif is_gdtot_link(link):
         return gdtot(link)
+    elif is_appdrive_link(link):
+        return appdrive(link)
     elif any(x in link for x in fmed_list):
         return fembed(link)
     elif any(x in link for x in ['sbembed.com', 'watchsb.com', 'streamsb.net', 'sbplay.org']):
         return sbembed(link)
+    elif 'gofile.io' in link:
+        return gofile(link)
     else:
         raise DirectDownloadLinkException(f'No Direct link function found for {link}')
 
 def zippy_share(url: str) -> str:
     try:
-        link = re_findall(r'\bhttps?://.*zippyshare\.com\S+', url)[0]
+        link = re_findall(r'\b(https?://.*zippyshare\.com\S+)', url)[0]
     except IndexError:
         raise DirectDownloadLinkException("ERROR: No Zippyshare links found")
     try:
-        base_url = re.search('http.+.zippyshare.com/', url).group()
-        response = r.get(url).content
-        pages = b4(response, "lxml")
-        js_script = pages.find("div", {"class": "right"})
-        js_script = js_script.find_all("script")[0]
-        js_content = re.findall(r'\.href.=."/(.*?)";', str(js_script))[0]
+        base_url = re_search('http.+.zippyshare.com/', link).group()
+        response = rget(link).content
+        pages = BeautifulSoup(response, "lxml")
+        js_script = pages.find("div", style="margin-left: 24px; margin-top: 20px; text-align: center; width: 303px; height: 105px;")
+        js_content = re_findall(r'\.href.=."/(.*?)";', str(js_script))[0]
         js_content = str(js_content).split('"')
         a = str(js_script).split('var a = ')[1].split(';')[0]
         value = int(a) ** 3 + 3
@@ -402,6 +402,24 @@ def gdtot(url: str) -> str:
         decoded_id = b64decode(str(matches[0])).decode('utf-8')
     except:
         raise DirectDownloadLinkException("ERROR: Try in your broswer, mostly file not found or user limit exceeded!")
+    return f'https://drive.google.com/open?id={decoded_id}'
+
+def gofile(url: str) -> str:
+    try:
+        api_uri = 'https://api.gofile.io'
+        client = rsession()
+        res = client.get(f'{api_uri}/createAccount').json()
+        data = {
+            'contentId': url.split('/')[-1],
+            'token': res['data']['token'],
+            'websiteToken': 'websiteToken',
+            'cache': 'true'
+        }
+        res = client.get(f'{api_uri}/getContent', params=data).json()
+        content = list(res['data']['contents'].values())
+        return content[0]['directLink']
+    except:
+        raise DirectDownloadLinkException("ERROR: Error trying to generate Direct Link from gofile!")
     return f'https://drive.google.com/open?id={decoded_id}'
 
 account = {
